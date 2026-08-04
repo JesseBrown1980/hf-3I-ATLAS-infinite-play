@@ -24,7 +24,7 @@ a{color:#e8c07a}small{color:#8d8496}
 <main>
 <h1>3I/ATLAS — the infinite play</h1>
 <p class="sub">Starts from zero, from what was measured. No timer — and now the cheat:
-the super-speed ladder, ×3 per level, and the jumps. Every epoch from published physics
+the super-speed ladder, ×3 per level, the jumps — and the casts, seen from within: we be fish. Every epoch from published physics
 (<a href="https://huggingface.co/datasets/Jessedbrown/3I-ATLAS-receipts">the receipts</a>).</p>
 <canvas id="cv" width="1200" height="640"></canvas>
 <button id="go">release the play</button>
@@ -96,8 +96,8 @@ function draw(now){
  }else{
   const yrs=k<0.5?Math.round(Math.pow(10,Math.max(k,0))*3)+' yr':'10^'+k.toFixed(2)+' yr';
   document.getElementById('clock').textContent='year '+yrs+' · speed ×'+mult+' · still playing';
-  if(k<7){const ly=Math.pow(10,k)*3/5169;
-   whereEl.textContent='where: '+(ly<1?(ly*5169*12.2/206265*1000).toFixed(0)+' mau —':ly.toFixed(0)+' light-years out,')+' ballistic, position EXACT';}
+  if(k<7){const ly=Math.pow(10,k)*3/5169;let casts=0;for(let i=0;i<25;i++)if(k>0.4+i*0.275)casts++;
+   whereEl.textContent='where: '+(ly<1?(ly*5169*12.2/206265*1000).toFixed(0)+' mau —':ly.toFixed(0)+' light-years out,')+' ballistic, EXACT · casts '+casts+'/25 · catches 0 (measured, 2509.03361)';}
   else whereEl.textContent='where: THE ENSEMBLE — past the chaos horizon the honest answer is a cloud, not a point';
   cap(k,999);
   if(k<34){const fan=k<7?0:Math.min(1,(k-7)/4);
@@ -109,8 +109,17 @@ function draw(now){
     for(let i=0;i<70;i++){const a=i/70*6.283+now/9000,r=150+28*Math.sin(i*2.7+now/1400);
      g.globalAlpha=0.10;g.fillStyle='#8cbeff';
      g.fillRect(W*0.55+Math.cos(a)*r,H*0.5+Math.sin(a)*r*0.36,2.5,2.5);g.globalAlpha=1;}}
-   else{const px=W*(0.1+((k+1)%1.0)*0.82);
-    g.fillStyle='#322E32';g.strokeStyle='#8d8496';g.beginPath();g.arc(px,H*0.5,4.5,0,7);g.fill();g.stroke();}
+   else{const vx=W*0.4,vy=H*0.5; // we be fish: the visitor holds the centre, the galaxy casts past
+    for(let i=0;i<25;i++){const ki=0.4+i*0.275;
+     if(k>ki-0.25&&k<ki+0.06){const p=(k-(ki-0.25))/0.31;
+      const sy=vy+((i%2)?-1:1)*(85+(i*37)%70), sx=W*(1.06-p*1.14);
+      g.fillStyle='#ffe6b0';g.beginPath();g.arc(sx,sy,i===11?5:3,0,7);g.fill();
+      if(i===11){g.beginPath();g.arc(sx+9,sy+4,3,0,7);g.fill();
+       g.fillStyle='#e8c07a';g.font='11px ui-monospace';
+       g.fillText('the closest cast — M-dwarf binary · 0.242 pc · 1.64 Myr · 28.39 km/s · bend: arcseconds',W*0.12,sy+((i%2)?-14:22));}
+      g.strokeStyle='rgba(255,230,176,0.16)';g.beginPath();g.moveTo(sx,sy);
+      g.quadraticCurveTo((sx+vx)/2,(sy+vy)/2+((i%2)?18:-18),vx+30,vy+((i%2)?-9:9));g.stroke();}}
+    g.fillStyle='#322E32';g.strokeStyle='#8d8496';g.beginPath();g.arc(vx,vy,4.5,0,7);g.fill();g.stroke();}
   }else{const names=[['−  decayed to light','#d95926'],['0  unmeasured','#8d8496'],['+  the sphere, creeping toward iron','#199e70']];
    for(let l=0;l<3;l++){const y=H*(0.28+l*0.22);
     g.strokeStyle=names[l][1];g.globalAlpha=0.25;
