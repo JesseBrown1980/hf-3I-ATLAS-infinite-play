@@ -8,112 +8,129 @@ main{max-width:860px;width:100%;padding:22px 16px 60px}
 h1{font:600 22px/1.3 ui-serif,Georgia,serif;margin:0 0 4px}
 .sub{color:#8d8496;font-size:12.5px;margin:0 0 14px}
 #cv{width:100%;border:1px solid #241e30;border-radius:13px;background:#050309;display:block}
-button{display:block;width:100%;margin:14px 0 8px;background:transparent;color:#e8c07a;
- border:1px solid #e8c07a;border-radius:11px;padding:14px;font:600 14px ui-monospace,monospace;cursor:pointer}
+button{background:transparent;color:#e8c07a;border:1px solid #e8c07a;border-radius:11px;
+ padding:12px;font:600 13px ui-monospace,monospace;cursor:pointer}
 button:hover{background:rgba(232,192,122,.08)}
+#go{display:block;width:100%;margin:14px 0 8px;padding:14px;font-size:14px}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.row button{flex:1;padding:9px 6px;font-size:11.5px;border-color:#241e30;color:#c9c0d4}
+.row button.on{border-color:#e8c07a;color:#e8c07a}
+.lbl{font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#8d8496;margin-top:10px}
 #cap{min-height:3.2em;color:#c9c0d4;font-size:12.5px}
 #clock{color:#e8c07a;font-size:13px;letter-spacing:.5px}
+#where{color:#8d8496;font-size:12px}
 a{color:#e8c07a}small{color:#8d8496}
 </style>
 <main>
 <h1>3I/ATLAS — the infinite play</h1>
-<p class="sub">Starts from zero, from what was measured. No timer. It does not stop —
-you just let it go. Every epoch from published physics
+<p class="sub">Starts from zero, from what was measured. No timer — and now the cheat:
+the super-speed ladder, ×3 per level, and the jumps. Every epoch from published physics
 (<a href="https://huggingface.co/datasets/Jessedbrown/3I-ATLAS-receipts">the receipts</a>).</p>
 <canvas id="cv" width="1200" height="640"></canvas>
 <button id="go">release the play</button>
-<div id="clock"></div>
-<div id="cap"></div>
-<small>halo death: measured (day ~30 cliff, gone by Dec 7) · chaos horizon 1e7 yr: the path
-becomes unknowable in principle, drawn as the fan · the trit at 1e34 yr (proton decay) is
-UNMEASURED and drawn as unmeasured · Dyson sphere-flow 1e65 · last black holes 1e100 ·
-after that the clock simply keeps counting. Jesse Daniel Brown (OP-JESSE) · not lost.</small>
+<div class="lbl">the cheat — speed, ×3 per level</div>
+<div class="row" id="speeds">
+<button data-m="1" class="on">×1</button><button data-m="3">×3</button>
+<button data-m="9">×9</button><button data-m="27">×27</button><button data-m="81">×81</button>
+</div>
+<div class="lbl">the jumps — go see what it would have done</div>
+<div class="row" id="jumps">
+<button data-k="6">10⁶ yr</button><button data-k="9">10⁹ yr</button>
+<button data-k="13.3">2×10¹³ yr</button><button data-k="34">10³⁴ the trit</button>
+<button data-k="100">10¹⁰⁰</button>
+</div>
+<div id="clock"></div><div id="where"></div><div id="cap"></div>
+<small>before year 10⁷ the play answers WHERE (ballistic, 1 ly per 5,169 yr) · past the chaos
+horizon it answers where it COULD be — the ensemble is the honest answer, so the point becomes
+a cloud · the trit at 10³⁴ is unmeasured and drawn as unmeasured · no timer, ever.
+Jesse Daniel Brown (OP-JESSE) · not lost.</small>
 </main>
 <script>
 const cv=document.getElementById('cv'),g=cv.getContext('2d');
 const W=cv.width,H=cv.height,CX=W*0.32,CY=H*0.52;
-let running=false,t0=0;
-const CAPS=[
- [0,"Perihelion, 2025-10-29. v∞ = 58 km/s, e = 6 — unbound by the widest margin ever seen. The halo is at full glow: 86% of the water is the halo, not the nucleus."],
- [28,"Day 28: the cliff. Production collapses ×3.5 in six days while the comet barely moves. The icy-grain halo is dying — timed by four independent instruments."],
- [41,"Day 41: SWAN's last row. The halo is gone. What remains is a 0.42-km nucleus, 1.6×10¹¹ kg, leaving forever."],
- [3.5,"Year ~5,169: one light-year out. She was right not to chase it — nothing can. It cannot be absorbed; only its data could, and that is already done."],
- [7,"Year 1e7: THE CHAOS HORIZON. Past here the trajectory is unknowable in principle — the path is drawn as a fan because that is what knowledge actually does here."],
- [9,"Year 1e9: it has NOT left the galaxy — 58 km/s is far below escape. It mixes back into the thick disk it came from, ten billion years after leaving it."],
- [14,"Year 1e14: the last red dwarfs die. Every photograph ever taken of it happened in the first 10⁻¹² of its future."],
- [20,"Year 1e19–20: galactic evaporation. One last slingshot — its whole biography's move — flings it to the dark or feeds it to the centre."],
- [34,"Year 1e34: THE TRIT. Does the proton decay? Physics holds only a bound. The play forks three lanes — minus, free centre, plus — and honestly cannot choose."],
- [65,"Year 1e65 (+ lane): Dyson flow. On these timescales solid matter creeps like liquid; every rock becomes a sphere, inching element by element toward iron-56."],
- [100,"Year 1e100: the last black holes evaporate. Nothing that makes light happens again. The minus lane returned everything to photons long ago — rock, key, and receipts alike."],
- [200,"Year 1e200 and counting. The deuterium key — 0.95%, written ten billion years before the Sun — rides the plus lane past every horizon. The clock is not stopping. You were told: no timer."]];
+let running=false,last=0,mult=1,vs=0; // vs = virtual playhead seconds (14s of passage, then log epoch)
+const CAPS=[[0,"Perihelion, 2025-10-29. v∞ = 58 km/s, e = 6 — unbound forever. The halo at full glow: 86% of the water is halo, not nucleus."],
+ [28,"Day 28: the cliff. Production collapses ×3.5 in six days. The icy-grain halo is dying — timed by four independent instruments."],
+ [41,"Day 41: SWAN's last row. The halo is gone. A 0.42-km nucleus, 1.6×10¹¹ kg, leaving forever."],
+ [3.5,"Year ~5,169: one light-year out. Nothing can absorb it; only its data could be, and that is done."],
+ [7,"Year 10⁷: THE CHAOS HORIZON. Past here the trajectory is unknowable in principle — the point becomes a cloud, because that is what knowledge does here."],
+ [9,"Year 10⁹: it has NOT left the galaxy — 58 km/s is far below escape. It phase-mixes back into the thick disk it came from."],
+ [13.3,"Year 2×10¹³ — your twenty trillion. Still the stelliferous era, barely: the disk is dynamically heated, the Sun is a black dwarf, and the visitor is a statistical shell wrapped around the whole galaxy. 'The next place' is everywhere its ensemble touches."],
+ [14,"Year 10¹⁴: the last red dwarfs die."],
+ [20,"Year 10¹⁹⁻²⁰: galactic evaporation — one last slingshot, its biography's move, at full scale."],
+ [34,"Year 10³⁴: THE TRIT. Proton decay — bounded, unmeasured. Three lanes; the play honestly cannot choose."],
+ [65,"Year 10⁶⁵ (+ lane): Dyson flow — every rock becomes a sphere, creeping toward iron-56."],
+ [100,"Year 10¹⁰⁰: the last black holes evaporate. The clock does not stop. You were told: no timer."]];
 let stars=[];for(let i=0;i<260;i++)stars.push([Math.random()*W,Math.random()*H,Math.random()]);
-function cap(k){let c=CAPS[0];for(const e of CAPS)if(k>=e[0])c=e;
+function kOf(){return vs<14?-1:(vs-14)*0.055;}
+function cap(k,d){let c=CAPS[0];for(const e of CAPS){const th=(vs<14)?(e[0]<=41?e[0]:1e9):e[0];
+ if((vs<14?d:k)>=th && (vs<14?e[0]<=41:e[0]>3))c=e; else if(vs<14&&e[0]<=41&&d>=e[0])c=e;}
  document.getElementById('cap').textContent=c[1];}
 function draw(now){
  if(!running)return;
- const s=(now-t0)/1000;
+ const dt=(now-last)/1000; last=now; vs+=dt*mult;
  g.fillStyle='#050309';g.fillRect(0,0,W,H);
- // phases: 0-14s measured passage (days 0-100) · then log-clock forever
- let k;  // k = log10(years)
- if(s<14){k=-1;}else{k=(s-14)*0.055;}   // exponent grows forever, slowly — no timer, no end
- // starfield: dies at 1e14, scatters at 1e20
- for(const st of stars){
-   let a=0.5*st[2];
-   if(k>13)a*=Math.max(0,1-(k-13)/2.5);
-   if(a<=0)continue;
-   let x=st[0],y=st[1];
-   if(k>18){const f=Math.min(1,(k-18)/3);x=x+(x-W/2)*f*3;y=y+(y-H/2)*f*3;if(x<0||x>W||y<0||y>H)continue;}
-   g.globalAlpha=a;g.fillStyle='#c3c2b7';g.fillRect(x,y,1.4,1.4);}
+ const k=kOf();
+ for(const st of stars){let a=0.5*st[2];
+  if(k>13)a*=Math.max(0,1-(k-13)/2.5); if(a<=0)continue;
+  let x=st[0],y=st[1];
+  if(k>18){const f=Math.min(1,(k-18)/3);x+= (x-W/2)*f*3;y+=(y-H/2)*f*3;if(x<0||x>W||y<0||y>H)continue;}
+  g.globalAlpha=a;g.fillStyle='#c3c2b7';g.fillRect(x,y,1.4,1.4);}
  g.globalAlpha=1;
- if(s<14){ // the measured passage
-   const d=s/14*100; // days since perihelion
-   document.getElementById('clock').textContent='day '+d.toFixed(1)+' after perihelion';
-   cap(d<28?0:d<41?28:41);
-   g.fillStyle='#e8c07a';g.beginPath();g.arc(CX,CY,7,0,7);g.fill(); // the Sun
-   g.strokeStyle='#241e30';for(const r of [60,110,170]){g.beginPath();g.arc(CX,CY,r,0,7);g.stroke();}
-   // hyperbolic path
-   g.strokeStyle='rgba(141,132,150,.35)';g.beginPath();
-   for(let u=-2.2;u<2.4;u+=0.02){const x=CX+(Math.cosh(u)-1.55)*95,y=CY+Math.sinh(u)*78;
-     u===-2.2?g.moveTo(x,y):g.lineTo(x,y);}g.stroke();
-   const u=-2.2+ (d/100)*4.2, x=CX+(Math.cosh(u)-1.55)*95, y=CY+Math.sinh(u)*78;
-   let halo=d<28?1:d<34?1-(d-28)/6*0.72:Math.max(0,0.28-(d-34)/7*0.28); // the measured cliff
-   if(halo>0){const gr=g.createRadialGradient(x,y,0,x,y,34*halo+8);
-     gr.addColorStop(0,'rgba(140,190,255,'+(0.5*halo)+')');gr.addColorStop(1,'rgba(0,0,0,0)');
-     g.fillStyle=gr;g.beginPath();g.arc(x,y,34*halo+8,0,7);g.fill();}
-   g.fillStyle='#322E32';g.strokeStyle='#8d8496';g.beginPath();g.arc(x,y,4.5,0,7);g.fill();g.stroke();
- }else{ // deep time — the exponent climbs forever
-   const yrs=k<0.5?'year '+Math.round(Math.pow(10,Math.max(k,0))*3):'year 10^'+k.toFixed(2);
-   document.getElementById('clock').textContent=yrs+' — still playing';
-   cap(k);
-   if(k<34){ // one lane, fanning at the chaos horizon
-     const fan=k<7?0:Math.min(1,(k-7)/4);
-     for(let i=0;i<(fan>0?9:1);i++){
-       const off=(i-4)*fan*26;
-       g.strokeStyle='rgba(140,190,255,'+(fan>0?0.10:0.5)+')';
-       g.beginPath();g.moveTo(W*0.1,H*0.5+off*0.2);
-       g.quadraticCurveTo(W*0.5,H*0.5+off,W*0.92,H*0.5+off*1.6);g.stroke();}
-     const px=W*(0.1+((k+1)%1.0)*0.82);
-     g.fillStyle='#322E32';g.strokeStyle='#8d8496';g.beginPath();
-     g.arc(px,H*0.5,4.5,0,7);g.fill();g.stroke();
-   }else{ // the trit: three lanes forever
-     const names=[['−  decayed to light','#d95926'],['0  unmeasured','#8d8496'],['+  the sphere, creeping toward iron','#199e70']];
-     for(let l=0;l<3;l++){const y=H*(0.28+l*0.22);
-       g.strokeStyle=names[l][1];g.globalAlpha=0.25;
-       g.beginPath();g.moveTo(W*0.08,y);g.lineTo(W*0.94,y);g.stroke();g.globalAlpha=1;
-       g.fillStyle=names[l][1];g.font='12px ui-monospace';g.fillText(names[l][0],W*0.08,y-10);
-       if(l===0){for(let i=0;i<14;i++){g.globalAlpha=0.10+0.10*Math.sin(now/700+i);
-         g.fillStyle='#d95926';g.fillRect(W*0.08+i*W*0.062,y-2,3,3);}g.globalAlpha=1;}
-       if(l===1){g.fillStyle='#8d8496';g.globalAlpha=0.5;
-         g.beginPath();g.arc(W*0.5+Math.sin(now/2400)*W*0.35,y,3.5,0,7);g.fill();g.globalAlpha=1;}
-       if(l===2){const r=5+Math.min(9,(k-34)/6);
-         const gx=W*0.5+Math.sin(now/3600)*W*0.35;
-         g.fillStyle='#3a4450';g.strokeStyle='#199e70';
-         g.beginPath();g.arc(gx,y,r,0,7);g.fill();g.stroke();}}
-   }
+ const whereEl=document.getElementById('where');
+ if(vs<14){const d=vs/14*100;
+  document.getElementById('clock').textContent='day '+d.toFixed(1)+' after perihelion · speed ×'+mult;
+  whereEl.textContent='where: '+(d*12.2/365.25*d/ d||0, (d*0.0334).toFixed(1))+' au out, position EXACT';
+  cap(k,d);
+  g.fillStyle='#e8c07a';g.beginPath();g.arc(CX,CY,7,0,7);g.fill();
+  g.strokeStyle='#241e30';for(const r of [60,110,170]){g.beginPath();g.arc(CX,CY,r,0,7);g.stroke();}
+  g.strokeStyle='rgba(141,132,150,.35)';g.beginPath();
+  for(let u=-2.2;u<2.4;u+=0.02){const x=CX+(Math.cosh(u)-1.55)*95,y=CY+Math.sinh(u)*78;
+   u===-2.2?g.moveTo(x,y):g.lineTo(x,y);}g.stroke();
+  const u=-2.2+(d/100)*4.2,x=CX+(Math.cosh(u)-1.55)*95,y=CY+Math.sinh(u)*78;
+  let halo=d<28?1:d<34?1-(d-28)/6*0.72:Math.max(0,0.28-(d-34)/7*0.28);
+  if(halo>0){const gr=g.createRadialGradient(x,y,0,x,y,34*halo+8);
+   gr.addColorStop(0,'rgba(140,190,255,'+(0.5*halo)+')');gr.addColorStop(1,'rgba(0,0,0,0)');
+   g.fillStyle=gr;g.beginPath();g.arc(x,y,34*halo+8,0,7);g.fill();}
+  g.fillStyle='#322E32';g.strokeStyle='#8d8496';g.beginPath();g.arc(x,y,4.5,0,7);g.fill();g.stroke();
+ }else{
+  const yrs=k<0.5?Math.round(Math.pow(10,Math.max(k,0))*3)+' yr':'10^'+k.toFixed(2)+' yr';
+  document.getElementById('clock').textContent='year '+yrs+' · speed ×'+mult+' · still playing';
+  if(k<7){const ly=Math.pow(10,k)*3/5169;
+   whereEl.textContent='where: '+(ly<1?(ly*5169*12.2/206265*1000).toFixed(0)+' mau —':ly.toFixed(0)+' light-years out,')+' ballistic, position EXACT';}
+  else whereEl.textContent='where: THE ENSEMBLE — past the chaos horizon the honest answer is a cloud, not a point';
+  cap(k,999);
+  if(k<34){const fan=k<7?0:Math.min(1,(k-7)/4);
+   for(let i=0;i<(fan>0?9:1);i++){const off=(i-4)*fan*26;
+    g.strokeStyle='rgba(140,190,255,'+(fan>0?0.10:0.5)+')';
+    g.beginPath();g.moveTo(W*0.1,H*0.5+off*0.2);
+    g.quadraticCurveTo(W*0.5,H*0.5+off,W*0.92,H*0.5+off*1.6);g.stroke();}
+   if(k>9){ // phase-mixed: the torus cloud around the disk
+    for(let i=0;i<70;i++){const a=i/70*6.283+now/9000,r=150+28*Math.sin(i*2.7+now/1400);
+     g.globalAlpha=0.10;g.fillStyle='#8cbeff';
+     g.fillRect(W*0.55+Math.cos(a)*r,H*0.5+Math.sin(a)*r*0.36,2.5,2.5);g.globalAlpha=1;}}
+   else{const px=W*(0.1+((k+1)%1.0)*0.82);
+    g.fillStyle='#322E32';g.strokeStyle='#8d8496';g.beginPath();g.arc(px,H*0.5,4.5,0,7);g.fill();g.stroke();}
+  }else{const names=[['−  decayed to light','#d95926'],['0  unmeasured','#8d8496'],['+  the sphere, creeping toward iron','#199e70']];
+   for(let l=0;l<3;l++){const y=H*(0.28+l*0.22);
+    g.strokeStyle=names[l][1];g.globalAlpha=0.25;
+    g.beginPath();g.moveTo(W*0.08,y);g.lineTo(W*0.94,y);g.stroke();g.globalAlpha=1;
+    g.fillStyle=names[l][1];g.font='12px ui-monospace';g.fillText(names[l][0],W*0.08,y-10);
+    if(l===0){for(let i=0;i<14;i++){g.globalAlpha=0.10+0.10*Math.sin(now/700+i);
+     g.fillStyle='#d95926';g.fillRect(W*0.08+i*W*0.062,y-2,3,3);}g.globalAlpha=1;}
+    if(l===1){g.fillStyle='#8d8496';g.globalAlpha=0.5;
+     g.beginPath();g.arc(W*0.5+Math.sin(now/2400)*W*0.35,y,3.5,0,7);g.fill();g.globalAlpha=1;}
+    if(l===2){const r=5+Math.min(9,(k-34)/6),gx=W*0.5+Math.sin(now/3600)*W*0.35;
+     g.fillStyle='#3a4450';g.strokeStyle='#199e70';g.beginPath();g.arc(gx,y,r,0,7);g.fill();g.stroke();}}}
  }
  requestAnimationFrame(draw);}
-document.getElementById('go').onclick=()=>{
- if(running)return; running=true;t0=performance.now();
+function start(){if(!running){running=true;last=performance.now();
  document.getElementById('go').textContent='playing — from zero, from what we know, forever';
- requestAnimationFrame(draw);};
+ requestAnimationFrame(draw);}}
+document.getElementById('go').onclick=start;
+document.querySelectorAll('#speeds button').forEach(b=>b.onclick=()=>{
+ document.querySelectorAll('#speeds button').forEach(x=>x.classList.remove('on'));
+ b.classList.add('on');mult=+b.dataset.m;start();});
+document.querySelectorAll('#jumps button').forEach(b=>b.onclick=()=>{
+ vs=14+(+b.dataset.k)/0.055;start();});
 </script>
